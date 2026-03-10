@@ -15,6 +15,31 @@ class DiskManager: ObservableObject {
     @Published var disks: [Disk] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var fuseInstalled = false
+    @Published var ntfs3gInstalled = false
+    
+    init() {
+        checkPrerequisites()
+    }
+    
+    func checkPrerequisites() {
+        fuseInstalled = checkFUSEInstalled()
+        ntfs3gInstalled = checkNTFS3GInstalled()
+    }
+    
+    func checkFUSEInstalled() -> Bool {
+        // Проверка macFUSE
+        let fm = FileManager.default
+        return fm.fileExists(atPath: "/Library/Frameworks/macFUSE.framework") ||
+               fm.fileExists(atPath: "/usr/local/include/fuse") ||
+               fm.fileExists(atPath: "/opt/homebrew/include/fuse")
+    }
+    
+    func checkNTFS3GInstalled() -> Bool {
+        let fm = FileManager.default
+        return fm.fileExists(atPath: "/usr/local/bin/ntfs-3g") ||
+               fm.fileExists(atPath: "/opt/homebrew/bin/ntfs-3g")
+    }
     
     func refreshDisks() {
         isLoading = true
@@ -81,9 +106,15 @@ class DiskManager: ObservableObject {
     }
     
     func mountNTFS(device: String) -> Bool {
+        guard fuseInstalled, ntfs3gInstalled else {
+            errorMessage = "macFUSE или ntfs-3g не установлены"
+            return false
+        }
+        
         let task = Process()
-        task.launchPath = "/usr/local/bin/ntfs-3g"
+        task.launchPath = "/usr/bin/sudo"
         task.arguments = [
+            "/usr/local/bin/ntfs-3g",
             "/dev/\(device)",
             "/Volumes/NTFS_\(device)",
             "-o", "local,allow_other,auto_xattr"
@@ -94,13 +125,14 @@ class DiskManager: ObservableObject {
             task.waitUntilExit()
             return task.terminationStatus == 0
         } catch {
+            errorMessage = error.localizedDescription
             return false
         }
     }
     
     func unmount(device: String) -> Bool {
         let task = Process()
-        task.launchPath = "/usr/bin/diskutil"
+        task.launchPath = "/usr/sbin/diskutil"
         task.arguments = ["unmount", "/dev/\(device)"]
         
         do {
@@ -108,6 +140,7 @@ class DiskManager: ObservableObject {
             task.waitUntilExit()
             return task.terminationStatus == 0
         } catch {
+            errorMessage = error.localizedDescription
             return false
         }
     }
