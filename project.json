@@ -1,0 +1,17 @@
+{
+  "name": "NTFS macOS Driver",
+  "version": "1.0.0",
+  "description": "NTFS/FAT32 driver for macOS using macFUSE and ntfs-3g",
+  "author": "AI Assistant",
+  "license": "GPL-3.0",
+  "platforms": ["macOS"],
+  "requirements": {
+    "macOS": ">=11.0",
+    "dependencies": ["macfuse", "ntfs-3g"]
+  },
+  "components": {
+    "cli": "Sources/CLI",
+    "gui": "Sources/GUI", 
+    "installer": "Scripts/install.sh"
+  }
+}
